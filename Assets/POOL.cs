@@ -4,6 +4,8 @@ using UnityEngine;
 using System;
 using Random = System.Random;
 using TMPro;
+using UnityEngine.UI;
+using UnityEngine.Video;
 
 public class POOL : MonoBehaviour
 {
@@ -23,18 +25,7 @@ public class POOL : MonoBehaviour
     public int GOLDSTASH;
     public int BANK;
 
-    public bool gold_claim;
-
-    // default
-    //  public int GOLDBAR_orig=30;
-    //  public int DRAW_orig=3;
-    //  public int SHERIFF_orig=3 ;
-    //  public int LASSO_orig=3;
-    //  public int MOONSHINE_orig=3;
-    //  public int STICKEMUP_orig=3;
-    //  public int GOLDSTASH_orig =3;
-    //  public int BANK_orig=3;
-    // round tracker
+    public bool gold_claim; // game mode settings
 
     public string current_card_flipped = "CARDBACK0";
     public string current_card_flipped_face_name = "";
@@ -54,7 +45,7 @@ public class POOL : MonoBehaviour
     public bool card_clickable = true;
     public bool startWithCARDBACK1 = true; //TODO: when finish game 
     public int totalgolds; // for test purpose, total golds should not change
-
+    public int total_number_unflipped_in_pool_execlude_table;
     void UpdateUnflippedCardTracker()
     {
         GOLDBAR = cards_number_map["GOLDBAR"];
@@ -68,8 +59,6 @@ public class POOL : MonoBehaviour
     }
     void StartSetCardsNumber()
     {
-
-
         cards_number_map["GOLDBAR"] = cards_number_map_orig["GOLDBAR"];
         cards_number_map["DRAW"] = cards_number_map_orig["DRAW"];
         cards_number_map["LASSO"] = cards_number_map_orig["LASSO"];
@@ -79,7 +68,8 @@ public class POOL : MonoBehaviour
         cards_number_map["GOLDSTASH"] = cards_number_map_orig["GOLDSTASH"];
         cards_number_map["BANK"] = cards_number_map_orig["BANK"];
         UpdateUnflippedCardTracker();
-        number_of_card_types = 8;
+        number_of_card_types = cards_number_map_orig.Count;
+        Debug.Assert(number_of_card_types==8);
         cards = new string[number_of_card_types];
         int idx = 0;
         foreach (KeyValuePair<string, int> card_num in cards_number_map)
@@ -88,6 +78,8 @@ public class POOL : MonoBehaviour
             idx++;
         }
         total_number_unflipped_in_pool = Sum(cards_number_map);
+        total_number_unflipped_in_pool_execlude_table = total_number_unflipped_in_pool - 16;
+        StartCoroutine(displayDeckNum());
         gold_claim = true;
         Debug.Log("totalnumber" + total_number_unflipped_in_pool);
     }
@@ -97,11 +89,10 @@ public class POOL : MonoBehaviour
         number_of_card_flipped_on_the_table = 0;
         num_gold_on_the_table = 0;
         num_goldstash_on_the_table = 0;
-        goldstashcards_on_the_table = new string[16] ;
-        goldcards_on_the_table = new string[16] ;
-        Array.Fill<string>(goldstashcards_on_the_table,"");
-                Array.Fill<string>(goldcards_on_the_table,"");
-
+        goldstashcards_on_the_table = new string[16];
+        goldcards_on_the_table = new string[16];
+        Array.Fill<string>(goldstashcards_on_the_table, "");
+        Array.Fill<string>(goldcards_on_the_table, "");
         player1_score = 3;
         player2_score = 3;
         totalgolds = cards_number_map["GOLDBAR"] + 3 * cards_number_map["GOLDSTASH"] + player1_score + player2_score;
@@ -110,24 +101,9 @@ public class POOL : MonoBehaviour
     }
     private IEnumerator PlayStartVideo()
     {
-        GameObject camera = GameObject.Find("StartVideo");
-        camera.GetComponent<SpriteRenderer>().color = new Color(1.0f, 1.0f, 1.0f, 0.0f);
-
-        var videoPlayer = camera.GetComponent<UnityEngine.Video.VideoPlayer>();
-        videoPlayer.renderMode = UnityEngine.Video.VideoRenderMode.MaterialOverride;
-        videoPlayer.targetCameraAlpha = 1.0F;
-        videoPlayer.url = "Assets/HOMESCREEN.mp4";
-        videoPlayer.isLooping = true;
-        videoPlayer.playOnAwake = true;
-        // its prepareCompleted event.
-        videoPlayer.Play();
+        VideoUtil.playSpriteVideo("StartVideo",true);
         yield return new WaitForSeconds(1.0f);
         GameObject.Find("StartVideoStill").SetActive(false);
-        camera.GetComponent<SpriteRenderer>().color = new Color(1.0f, 1.0f, 1.0f, 1.0f);
-
-
-
-
         WInClick rulebutton = GameObject.Find("RuleButton").GetComponent<WInClick>();
         WInClick playbutton = GameObject.Find("PlayButton").GetComponent<WInClick>();
         rulebutton.Show();
@@ -141,17 +117,12 @@ public class POOL : MonoBehaviour
         cards_number_map_orig["GOLDBAR"] = 30;
         cards_number_map_orig["DRAW"] = 3;
         cards_number_map_orig["LASSO"] = 3;
-        cards_number_map_orig["SHERIFF"] = 3;
+        cards_number_map_orig["SHERIFF"] = 8;
         cards_number_map_orig["MOONSHINE"] = 3;
         cards_number_map_orig["STICKEMUP"] = 3;
-        cards_number_map_orig["GOLDSTASH"] = 3;
-        cards_number_map_orig["BANK"] = 10;
-        foreach (KeyValuePair<string, int> card_num in cards_number_map_orig){
-            string num_obj = card_num.Key.ToLower()+"_num";
-                    Debug.Log(num_obj);
-                    GameObject.Find(num_obj).GetComponent<TextMeshProUGUI>().text=card_num.Value.ToString();
-        }
-       
+        cards_number_map_orig["GOLDSTASH"] = 4;
+        cards_number_map_orig["BANK"] = 4;
+        SliderUtil.setSliderValues(cards_number_map_orig);
         StartSetCardsNumber();
         StartNewGame();
         StartCoroutine(PlayStartVideo());
@@ -171,6 +142,11 @@ public class POOL : MonoBehaviour
             CLICK card_obj_comp = card_obj.GetComponent<CLICK>();
             card_obj_comp.Reset();
             card_obj_comp.updateColor();
+            // GameObject.Find(objname + "_GOLDBAR").GetComponent<SpriteRenderer>().sharedMaterial.SetFloat("_Opacity", 0.0f);
+            GameObject.Find(objname + "_GOLDSTASH").GetComponent<SpriteRenderer>().color = new Color(1.0f, 1.0f,1.0f,0.0f);
+            GameObject.Find(objname + "_GOLDBAR").GetComponent<SpriteRenderer>().color = new Color(1.0f, 1.0f,1.0f,0.0f);
+
+
         }
     }
 
@@ -189,6 +165,8 @@ public class POOL : MonoBehaviour
     {
         cards_number_map[card] -= 1;
         total_number_unflipped_in_pool = Sum(cards_number_map);
+        // total_number_unflipped_in_pool_execlude_table -=1;
+        //    StartCoroutine(displayDeckNum());
     }
     public string generateCard()
     {
@@ -240,22 +218,14 @@ public class POOL : MonoBehaviour
     {
 
         yield return new WaitForSeconds(delay);
-
-        GameObject video = GameObject.Find("Video Player");
-
-
-        var videoPlayer = video.GetComponent<UnityEngine.Video.VideoPlayer>();
-        videoPlayer.renderMode = UnityEngine.Video.VideoRenderMode.CameraNearPlane;
-        videoPlayer.targetCameraAlpha = 1.0F;
         if (ifPlayer1Win)
-            videoPlayer.url = "Assets/ANIMATION_STEAL_PLAYER1.mp4";
+            VideoUtil.playCameraVideo("STEALPLAYER1_VIDEO",true);
         else
         {
-            videoPlayer.url = "Assets/ANIMATION_STEAL_PLAYER2.mp4";
-
+            VideoUtil.playCameraVideo("STEALPLAYER2_VIDEO",true);
         }
-        videoPlayer.isLooping = true;
-        videoPlayer.Play();
+        GameObject.Find("STEALGOLD_SFX").GetComponent<AudioSource>().Play();
+
         GameObject winButtonDown = GameObject.Find("WinButtonDown");
         WInClick winButtonDown_comp = winButtonDown.GetComponent<WInClick>();
         winButtonDown_comp.Show();
@@ -271,61 +241,94 @@ public class POOL : MonoBehaviour
             winButtonDown_comp.clickable = false;
         }
     }
+    private IEnumerator play_gameover_video()
+    {
+        GameObject gameOverPopUp = GameObject.Find("ENDGAME_POPUP");
+        Animator gameOverPopUpAni =  gameOverPopUp.GetComponent<Animator>();
+        GameObject.Find("POOL").GetComponent<POOL>().card_clickable = false;
+        gameOverPopUpAni.Play("ENDGAME",0,0.0f);
+        gameOverPopUp.transform.position = new Vector3(0.0f,0.0f,-0.1f);
+        yield return StartCoroutine(WaitFor.FFrames((int)300));
+        // transition animation
+        GameObject tranBottom = GameObject.Find("Transition Bottom"); //TODO ADD RULE 
+        GameObject tranTop= GameObject.Find("TransitionTop"); //TODO ADD RULE 
+        tranTop.GetComponent<Animator>().Play("TRANSITION",0,0.0f);
+        tranBottom.GetComponent<Animator>().Play("TRANSITION2",0,0.0f);
+
+        //chane scne
+        // yield return new WaitForSeconds(1.0f); //TODO change transition 
+
+
+        GameObject PlayAgainVideo = GameObject.Find("PlayAgainVideo");
+        var videoPlayer_playagain = PlayAgainVideo.GetComponent<UnityEngine.Video.VideoPlayer>();
+        videoPlayer_playagain.isLooping = true;
+        videoPlayer_playagain.Play();
+        yield return StartCoroutine(WaitFor.AnimationPos(tranBottom,-3.11f,true));
+        videoPlayer_playagain.GetComponent<SpriteRenderer>().color = new Color(1.0f, 1.0f, 1.0f, 1.0f);        
+        gameOverPopUp.transform.position = new Vector3(0.0f,0.0f,60.0f);
+        GameObject.Find("PlayAgainButton").GetComponent<WInClick>().Show();
+        yield return new WaitForSeconds(0.2f);
+        Debug.Log("restart game");
+        //display score
+        string play1_score_str = change_score_int_to_str(player1_score);
+        string play2_score_str = change_score_int_to_str(player2_score);
+        GameObject Play1Score_1 = GameObject.Find("Play1Score_1_FINAL");
+        GameObject Play1Score_2 = GameObject.Find("Play1Score_2_FINAL");
+        GameObject Play2Score_1 = GameObject.Find("Play2Score_1_FINAL");
+        GameObject Play2Score_2 = GameObject.Find("Play2Score_2_FINAL");
+        Play1Score_1.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play1_score_str[0]);
+        Play1Score_2.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play1_score_str[1]);
+        Play2Score_1.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play2_score_str[0]);
+        Play2Score_2.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play2_score_str[1]);
+        //restart
+        startWithCARDBACK1 = !startWithCARDBACK1;
+        Reset();
+
+    }
 
     public void round_finish_process()
     {
+        int new_totalscore = cards_number_map["GOLDBAR"] + 3 * cards_number_map["GOLDSTASH"] + player1_score + player2_score;
         StartCoroutine(displayScores());
         // play play again video and show the button
         if (total_number_unflipped_in_pool < 16)
         {
-            Debug.Log("restart game");
-            GameObject.Find("PlayAgain").GetComponent<WInClick>().Show();
-            GameObject camera = GameObject.Find("PlayAgainVideo");
-            var videoPlayer = camera.GetComponent<UnityEngine.Video.VideoPlayer>();
-            videoPlayer.renderMode = UnityEngine.Video.VideoRenderMode.MaterialOverride;
-            videoPlayer.targetCameraAlpha = 1.0F;
-            videoPlayer.url = "Assets/PLAYAGAIN.mp4";
-            videoPlayer.isLooping = true;
-            // its prepareCompleted event.
-            videoPlayer.Play();
-            camera.GetComponent<SpriteRenderer>().color = new Color(1.0f, 1.0f, 1.0f, 1.0f);
-            string play1_score_str = change_score_int_to_str(player1_score);
-            string play2_score_str = change_score_int_to_str(player2_score);
-            GameObject Play1Score_1 = GameObject.Find("Play1Score_1_FINAL");
-            GameObject Play1Score_2 = GameObject.Find("Play1Score_2_FINAL");
-            GameObject Play2Score_1 = GameObject.Find("Play2Score_1_FINAL");
-            GameObject Play2Score_2 = GameObject.Find("Play2Score_2_FINAL");
-            Play1Score_1.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play1_score_str[0]);
-            Play1Score_2.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play1_score_str[1]);
-            Play2Score_1.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play2_score_str[0]);
-            Play2Score_2.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play2_score_str[1]);
-            Reset();
+            StartCoroutine(play_gameover_video());
         }
-
-        // reset the color and clickable status of each card
-        startWithCARDBACK1 = !startWithCARDBACK1;
-
-        for (int i = 0; i < 16; i++)
+        else
         {
-            string objname = "CARDBACK" + (i + 1).ToString();
+            total_number_unflipped_in_pool_execlude_table = total_number_unflipped_in_pool_execlude_table - number_of_card_flipped_on_the_table;
+            StartCoroutine(displayDeckNum());
+            startWithCARDBACK1 = !startWithCARDBACK1;
 
-            GameObject card_obj = GameObject.Find(objname);
-            CLICK card_obj_comp = card_obj.GetComponent<CLICK>();
-            card_obj_comp.Reset();
-            card_obj_comp.updateColor();
+            for (int i = 0; i < 16; i++)
+            {
+                string objname = "CARDBACK" + (i + 1).ToString();
+                GameObject card_obj = GameObject.Find(objname);
+                CLICK card_obj_comp = card_obj.GetComponent<CLICK>();
+                card_obj_comp.Reset();
+                card_obj_comp.updateColor();
+                // GameObject.Find(objname + "_GOLDBAR").GetComponent<SpriteRenderer>().sharedMaterial.SetFloat("_Opacity", 0.0f);
+                GameObject.Find(objname + "_GOLDSTASH").GetComponent<SpriteRenderer>().color =new Color(1.0f,1.0f,1.0f,0.0f);
+                GameObject.Find(objname + "_GOLDBAR").GetComponent<SpriteRenderer>().color =new Color(1.0f,1.0f,1.0f,0.0f);
+
+
+            }
+            current_card_flipped = "CARDBACK0";
+            current_card_flipped_face_name = "";
+            number_of_card_flipped_on_the_table = 0;
+            num_gold_on_the_table = 0;
+            num_goldstash_on_the_table = 0;
+            goldcards_on_the_table = new string[16];
+            goldstashcards_on_the_table = new string[16];
+            Array.Fill<string>(goldstashcards_on_the_table, "");
+            Array.Fill<string>(goldcards_on_the_table, "");
+            //sanity check
+            Debug.Assert(new_totalscore == totalgolds);
         }
-        current_card_flipped = "CARDBACK0";
-        current_card_flipped_face_name = "";
-        number_of_card_flipped_on_the_table = 0;
-        num_gold_on_the_table = 0;
-        num_goldstash_on_the_table = 0;
-        goldcards_on_the_table = new string [16];
-        goldstashcards_on_the_table = new string [16];
-              Array.Fill<string>(goldstashcards_on_the_table,"");
-                Array.Fill<string>(goldcards_on_the_table,"");
-        //sanity check
-        int new_totalscore = cards_number_map["GOLDBAR"] + 3 * cards_number_map["GOLDSTASH"] + player1_score + player2_score;
-        Debug.Assert(new_totalscore == totalgolds);
+    //TODO: below should for gameover
+        // reset the color and clickable status of each card
+
 
 
     }
@@ -340,21 +343,28 @@ public class POOL : MonoBehaviour
 
 
     }
-    public void remove_gold_goldstash_card_on_the_table(string cardback_adpated_name, bool ifgoldbar){
-        if(ifgoldbar){
-            for(int  i =0;i<16;++i){
-                if(goldcards_on_the_table[i]==cardback_adpated_name){
-                    goldcards_on_the_table[i]=""; num_gold_on_the_table--;
+    public void remove_gold_goldstash_card_on_the_table(string cardback_adpated_name, bool ifgoldbar)
+    {
+        if (ifgoldbar)
+        {
+            for (int i = 0; i < 16; ++i)
+            {
+                if (goldcards_on_the_table[i] == cardback_adpated_name)
+                {
+                    goldcards_on_the_table[i] = ""; num_gold_on_the_table--;
                 }
-               
+
             }
         }
-        else{
-                       for(int  i =0;i<16;++i){
-                if(goldstashcards_on_the_table[i]==cardback_adpated_name){
-                    goldstashcards_on_the_table[i]=""; num_goldstash_on_the_table--;
+        else
+        {
+            for (int i = 0; i < 16; ++i)
+            {
+                if (goldstashcards_on_the_table[i] == cardback_adpated_name)
+                {
+                    goldstashcards_on_the_table[i] = ""; num_goldstash_on_the_table--;
                 }
-            } 
+            }
         }
     }
     public void steal(bool player1win)
@@ -386,6 +396,21 @@ public class POOL : MonoBehaviour
             }
         }
     }
+    private IEnumerator play_gold_glow(string objname)
+    {
+     GameObject.Find(objname + "_GOLDBAR").GetComponent<UnityEngine.Video.VideoPlayer>().Play();
+        yield return new WaitForSeconds(0.1f);  // maybe change to wait video time or add still image before
+        GameObject.Find(objname + "_GOLDBAR").GetComponent<SpriteRenderer>().color = new Color(1.0f,1.0f,1.0f,1.0f);
+        }
+
+    private IEnumerator play_goldstash_glow(string objname)
+    {
+
+        GameObject.Find(objname + "_GOLDSTASH").GetComponent<UnityEngine.Video.VideoPlayer>().Play();
+        yield return new WaitForSeconds(0.1f);
+        GameObject.Find(objname + "_GOLDSTASH").GetComponent<SpriteRenderer>().color = new Color(1.0f,1.0f,1.0f,1.0f);
+        // GameObject.Find(objname + "_GOLDSTASH").GetComponent<SpriteRenderer>().sharedMaterial.SetFloat("_Opacity", 1.0f);
+    }
     public IEnumerator displayScores()
     {
         Debug.Log("displayScores");
@@ -400,17 +425,35 @@ public class POOL : MonoBehaviour
 
         for (float i = 0f; i <= 180f; i += 10f)
         {
-            // Play1Score_1.transform.rotation = Quaternion.Euler(0f, i, 0f);
-            // Play1Score_2.transform.rotation = Quaternion.Euler(0f, i, 0f);
-            // Play2Score_1.transform.rotation = Quaternion.Euler(0f, i, 0f);
-            // Play2Score_2.transform.rotation = Quaternion.Euler(0f, i, 0f);
-
             if (i == 90f)
             {
                 Play1Score_1.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play1_score_str[0]);
                 Play1Score_2.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play1_score_str[1]);
                 Play2Score_1.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play2_score_str[0]);
                 Play2Score_2.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + play2_score_str[1]);
+            }
+            yield return new WaitForSeconds(0.01f);
+        }
+        Debug.Log("displayScores end");
+
+    }
+    public IEnumerator displayDeckNum()
+    {
+        Debug.Log("displayScores");
+        string num_string = change_score_int_to_str(total_number_unflipped_in_pool_execlude_table);
+        // string play2_score_str = change_score_int_to_str(player2_score);
+        GameObject Play1Score_1 = GameObject.Find("decknum1_1");
+        GameObject Play1Score_2 = GameObject.Find("decknum1_2");
+
+
+
+        for (float i = 0f; i <= 180f; i += 10f)
+        {
+            if (i == 90f)
+            {
+                Play1Score_1.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + num_string[0]);
+                Play1Score_2.GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/NUM_" + num_string[1]);
+
             }
             yield return new WaitForSeconds(0.01f);
         }
@@ -436,14 +479,7 @@ public class POOL : MonoBehaviour
             goldstashcards_on_the_table[num_goldstash_on_the_table - 1] = current_card;
         }
 
-        for (int i = 0; i < 16; i++)
-        {
-            string objname = "CARDBACK" + (i + 1).ToString();
-            GameObject card_obj = GameObject.Find(objname);
-            CLICK card_obj_comp = card_obj.GetComponent<CLICK>();
-            card_obj_comp.ifAbleToFlip(current_card_flipped);
-            card_obj_comp.updateColor();
-        }
+
 
 
         bool round_finished = false;
@@ -457,7 +493,6 @@ public class POOL : MonoBehaviour
         }
         if (round_finished)
         {
-            Debug.Log("RoundFinish");
             // clear gold 
             if (current_card_face_name == "SHERIFF")
             {
@@ -517,12 +552,12 @@ public class POOL : MonoBehaviour
                     // player1 win player1 game
 
                     player1_score += num_gold_on_the_table + 3 * num_goldstash_on_the_table;
-                    Debug.Log("|player1_score"+ player1_score);
+                    Debug.Log("|player1_score" + player1_score);
                     num_gold_on_the_table = 0;
                     num_goldstash_on_the_table = 0;
                     ifplaysteal_video = true;
 
-                    StartCoroutine(play_steal_video(true, 1.0f));
+                    StartCoroutine(play_steal_video(true, 0.5f));
 
 
                 }
@@ -533,7 +568,7 @@ public class POOL : MonoBehaviour
                     num_goldstash_on_the_table = 0;
                     ifplaysteal_video = true;
 
-                    StartCoroutine(play_steal_video(false, 1.0f));
+                    StartCoroutine(play_steal_video(false,  0.5f));
 
                 }
             }
@@ -557,55 +592,71 @@ public class POOL : MonoBehaviour
             }
             else
             {
-                for (int i = 0; i <  16; ++i)
-                {  if(goldcards_on_the_table[i]!=""){
-                    string objname = CLICK.cardback_name_adapted_to_objname(goldcards_on_the_table[i]);
-                    Debug.Log(objname);
-                                        GameObject.Find(objname).GetComponent<CLICK>().claimable=true;
-}
-                }
-                                for (int i = 0; i <  16; ++i)
+                for (int i = 0; i < 16; ++i)
                 {
-                    if(goldstashcards_on_the_table[i]!=""){
-                    string objname = CLICK.cardback_name_adapted_to_objname(goldstashcards_on_the_table[i]);
-                    Debug.Log(objname);
-                    GameObject.Find(objname).GetComponent<CLICK>().claimable=true;
+                    if (goldcards_on_the_table[i] != "")
+                    {
+                        string objname = CLICK.cardback_name_adapted_to_objname(goldcards_on_the_table[i]);
+                        Debug.Log(objname);
+                        GameObject.Find(objname).GetComponent<CLICK>().claimable = true;
+                        StartCoroutine(play_gold_glow(objname));
 
                     }
                 }
+                for (int i = 0; i < 16; ++i)
+                {
+                    if (goldstashcards_on_the_table[i] != "")
+                    {
+                        string objname = CLICK.cardback_name_adapted_to_objname(goldstashcards_on_the_table[i]);
+                        Debug.Log(objname);
+                        GameObject.Find(objname).GetComponent<CLICK>().claimable = true;
+                        StartCoroutine(play_goldstash_glow(objname));
+
+                    }
 
 
 
 
+                }
             }
 
         }
         else if (player1_win_action)
         {
             // if win with action card but game continue
-             if (!gold_claim)
+            if (!gold_claim)
             {
-            player1_score += num_gold_on_the_table + 3 * num_goldstash_on_the_table;
-            num_gold_on_the_table = 0;
-            num_goldstash_on_the_table = 0;
-            goldstashcards_on_the_table = new string [16];
-            goldcards_on_the_table = new string [16];
-            Array.Fill<string>(goldstashcards_on_the_table,"");
-                        Array.Fill<string>(goldcards_on_the_table,"");}
-            else{
-                 for (int i = 0; i <  16; ++i)
-                {  if(goldcards_on_the_table[i]!=""){
-                    string objname = CLICK.cardback_name_adapted_to_objname(goldcards_on_the_table[i]);
-                    Debug.Log(objname);
-                    GameObject.Find(objname).GetComponent<CLICK>().claimable=true;
-}
-                }
-                for (int i = 0; i <  16; ++i)
+                player1_score += num_gold_on_the_table + 3 * num_goldstash_on_the_table;
+                num_gold_on_the_table = 0;
+                num_goldstash_on_the_table = 0;
+                goldstashcards_on_the_table = new string[16];
+                goldcards_on_the_table = new string[16];
+                Array.Fill<string>(goldstashcards_on_the_table, "");
+                Array.Fill<string>(goldcards_on_the_table, "");
+            }
+            else
+            {
+                for (int i = 0; i < 16; ++i)
                 {
-                    if(goldstashcards_on_the_table[i]!=""){
-                    string objname = CLICK.cardback_name_adapted_to_objname(goldstashcards_on_the_table[i]);
-                    Debug.Log(objname);
-                    GameObject.Find(objname).GetComponent<CLICK>().claimable=true;
+                    if (goldcards_on_the_table[i] != "")
+                    {
+                        string objname = CLICK.cardback_name_adapted_to_objname(goldcards_on_the_table[i]);
+                        Debug.Log(objname);
+                        GameObject.Find(objname).GetComponent<CLICK>().claimable = true;
+                        StartCoroutine(play_gold_glow(objname));
+
+                    }
+                }
+                for (int i = 0; i < 16; ++i)
+                {
+                    if (goldstashcards_on_the_table[i] != "")
+                    {
+                        string objname = CLICK.cardback_name_adapted_to_objname(goldstashcards_on_the_table[i]);
+                        Debug.Log(objname);
+                        GameObject.Find(objname).GetComponent<CLICK>().claimable = true;
+                        StartCoroutine(play_goldstash_glow(objname));
+
+
 
                     }
                 }
@@ -619,29 +670,37 @@ public class POOL : MonoBehaviour
         else if (player2_win_action)
         {
             // if win with action card but game continue
-             if (!gold_claim){
-            player2_score += num_gold_on_the_table + 3 * num_goldstash_on_the_table;
-            num_gold_on_the_table = 0;
-            num_goldstash_on_the_table = 0;
-                        goldstashcards_on_the_table = new string [16];
-            goldcards_on_the_table = new string [16];
-            Array.Fill<string>(goldstashcards_on_the_table,"");
-                        Array.Fill<string>(goldcards_on_the_table,"");}
-            else{
-                 for (int i = 0; i <  16; ++i)
-                {  if(goldcards_on_the_table[i]!=""){
-                    string objname = CLICK.cardback_name_adapted_to_objname(goldcards_on_the_table[i]);
-                    Debug.Log(objname);
-                    GameObject.Find(objname).GetComponent<CLICK>().claimable=true;
-}
-                }
-                for (int i = 0; i <  16; ++i)
+            if (!gold_claim)
+            {
+                player2_score += num_gold_on_the_table + 3 * num_goldstash_on_the_table;
+                num_gold_on_the_table = 0;
+                num_goldstash_on_the_table = 0;
+                goldstashcards_on_the_table = new string[16];
+                goldcards_on_the_table = new string[16];
+                Array.Fill<string>(goldstashcards_on_the_table, "");
+                Array.Fill<string>(goldcards_on_the_table, "");
+            }
+            else
+            {
+                for (int i = 0; i < 16; ++i)
                 {
-                    if(goldstashcards_on_the_table[i]!=""){
-                    string objname = CLICK.cardback_name_adapted_to_objname(goldstashcards_on_the_table[i]);
-                    Debug.Log(objname);
-                    GameObject.Find(objname).GetComponent<CLICK>().claimable=true;
+                    if (goldcards_on_the_table[i] != "")
+                    {
+                        string objname = CLICK.cardback_name_adapted_to_objname(goldcards_on_the_table[i]);
+                        Debug.Log(objname);
+                        GameObject.Find(objname).GetComponent<CLICK>().claimable = true;
+                        StartCoroutine(play_gold_glow(objname));
 
+                    }
+                }
+                for (int i = 0; i < 16; ++i)
+                {
+                    if (goldstashcards_on_the_table[i] != "")
+                    {
+                        string objname = CLICK.cardback_name_adapted_to_objname(goldstashcards_on_the_table[i]);
+                        Debug.Log(objname);
+                        GameObject.Find(objname).GetComponent<CLICK>().claimable = true;
+                        StartCoroutine(play_goldstash_glow(objname));
                     }
                 }
 
@@ -650,14 +709,18 @@ public class POOL : MonoBehaviour
         else
         {  //gold/gold stash continue
         }
-        
-        
-        
-        
-        
+
         UpdateUnflippedCardTracker();
         if (!round_finished)
         {
+                    for (int i = 0; i < 16; i++)
+        {
+            string objname = "CARDBACK" + (i + 1).ToString();
+            GameObject card_obj = GameObject.Find(objname);
+            CLICK card_obj_comp = card_obj.GetComponent<CLICK>();
+            card_obj_comp.ifAbleToFlip(current_card_flipped);
+            card_obj_comp.updateColor();
+        }
             StartCoroutine(displayScores());
         }
         else

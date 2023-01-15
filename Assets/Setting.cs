@@ -7,56 +7,57 @@ using UnityEngine.UI;
 public class Setting : MonoBehaviour
 {
     public Button Button;
+    public bool isClickable;
     // Start is called before the first frame update
     void Start()
     {
+                Debug.Log("Menu AddListener");
+        isClickable =true;
         Button.onClick.AddListener(wakeUpBarsOnClick);
         
     }
 
-    private IEnumerator play_transition_video(){
-         GameObject can_bars= GameObject.Find("Canvas");
-         GameObject transition_video = GameObject.Find("transition_video");
-         
-        var videoplayer= transition_video.GetComponent<UnityEngine.Video.VideoPlayer>();
-        videoplayer.url = "Assets/TRANSITION.mp4";
-        videoplayer.Play();
-        yield return new WaitForSeconds(0.2f);
-                // transition_video.transform.position = new Vector3(transition_video.transform.position.x,transition_video.transform.position.y,-0.1f);
-
-      GameObject.Find("transition_video").GetComponent<SpriteRenderer>().sharedMaterial.SetFloat("_Opacity", 1.0f);
-                    GameObject.Find("POOL").GetComponent<POOL>().card_clickable=false;
-
-
-        yield return new WaitForSeconds(2.0f);
-                    can_bars.GetComponent<Canvas>().planeDistance = 5;
-
-        // transition_video.transform.position = new Vector3(transition_video.transform.position.x,transition_video.transform.position.y,-600f);
-      GameObject.Find("transition_video").GetComponent<SpriteRenderer>().sharedMaterial.SetFloat("_Opacity", 0.0f);
-        videoplayer.url = "";
-
+    private IEnumerator showMenu(){
+         GameObject can_bars= GameObject.Find("MenuCanvas");
+        GameObject.Find("POOL").GetComponent<POOL>().card_clickable=false;
+        yield return new WaitForSeconds(0.0f);
+        can_bars.GetComponent<Canvas>().planeDistance = 5;
     }
     void wakeUpBarsOnClick(){
-        if(gameObject.name=="Button"){
-            StartCoroutine(play_transition_video());
-        // GameObject can_bars= GameObject.Find("Canvas");
-        // GameObject.Find("transition_video").GetComponent<UnityEngine.Video.VideoPlayer>().url = "Assets/TRANSITION.mp4";
-        //     can_bars.GetComponent<Canvas>().planeDistance = 5;
+        Debug.Log("Menu Click");
 
-        // GameObject.Find("POOL").GetComponent<POOL>().card_clickable=false;
+        if(gameObject.name=="MenuButton"&& isClickable){
+            Debug.Log("Menu Click");
+            StartCoroutine(showMenu());
         }
         else if(gameObject.name=="ok"){
-            GameObject.Find("POOL").GetComponent<POOL>().card_clickable=true;
-            GameObject.Find("Canvas").GetComponent<Canvas>().planeDistance = -20;
-            string [] cards =  GameObject.Find("POOL").GetComponent<POOL>().cards; // change to pool cards later
+
+            POOL pool = GameObject.Find("POOL").GetComponent<POOL>();
+            pool.card_clickable=true;
+            string [] cards = pool.cards; // change to pool cards later
+            int [] card_nums = new int [cards.Length];
+            int total_card = 0;
             for(int i=0;i<cards.Length;++i){
-            GameObject.Find("POOL").GetComponent<POOL>().cards_number_map_orig[cards[i]] =System.Int32.Parse((GameObject.Find(cards[i].ToLower()+"_num").GetComponent<TextMeshProUGUI>().text) );
+                card_nums[i]=System.Int32.Parse((GameObject.Find(cards[i].ToLower()+"_num").GetComponent<TextMeshProUGUI>().text) );
+                total_card+=card_nums[i];
             }
-            GameObject.Find("POOL").GetComponent<POOL>().Reset();
+            if(total_card<100 && total_card>=16){
+            for(int i=0;i<cards.Length;++i){
+            GameObject.Find("POOL").GetComponent<POOL>().cards_number_map_orig[cards[i]] =card_nums[i];
+            }            
+            GameObject.Find("MenuCanvas").GetComponent<Canvas>().planeDistance = -20;
+
+            GameObject.Find("POOL").GetComponent<POOL>().Reset();}
+            else{
+                //TODO: pop up same msg
+                Debug.Log("total num "+ total_card);
+            }
         }
         else if(gameObject.name=="cancel"){
+            SliderUtil.setSliderValues(GameObject.Find("POOL").GetComponent<POOL>().cards_number_map_orig);
             GameObject.Find("POOL").GetComponent<POOL>().card_clickable=true;
-            GameObject.Find("Canvas").GetComponent<Canvas>().planeDistance = -20;
+            GameObject.Find("MenuCanvas").GetComponent<Canvas>().planeDistance = -20;
+            
         }
 
     }

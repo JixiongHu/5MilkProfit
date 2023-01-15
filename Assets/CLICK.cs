@@ -2,8 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-
-
+using UnityEngine.Video;
 
 public class CLICK : MonoBehaviour
 {
@@ -91,7 +90,7 @@ public class CLICK : MonoBehaviour
             rend.color=new Color(1.0f, 1.0f, 1.0f, 0.5f);
         }else{            
             flipable=true;
-            rend.color=new Color(255,255,255,255);
+            rend.color=new Color(1.0f, 1.0f, 1.0f, 1.0f);
         }
         this.transform.position =new Vector3(this.transform.position.x,this.transform.position.y,position_z);
 
@@ -110,98 +109,76 @@ public class CLICK : MonoBehaviour
         GameObject pool_obj= GameObject.Find("POOL");
         POOL pool_obj_comp= pool_obj.GetComponent<POOL>();
         card_face_name = pool_obj_comp.generateCard();
+  
+        if(card_face_name=="MOONSHINE"||card_face_name=="STICKEMUP"||card_face_name=="DRAW"||card_face_name=="SHERIFF"||card_face_name=="LASSO"){
+            // SceneManager.LoadScene ("Untitled");
+
+            // pool_obj_comp.card_clickable=false;
+            GameObject video = GameObject.Find(card_face_name+"_VIDEO");
+            VideoPlayer videoPlayer = video.GetComponent<UnityEngine.Video.VideoPlayer>();
+            videoPlayer.renderMode = UnityEngine.Video.VideoRenderMode.CameraNearPlane;
+            videoPlayer.targetCameraAlpha = 0.0F;
+            videoPlayer.isLooping = true;
+            videoPlayer.Play();}
         Sprite faceSprite=sprite_dict[card_face_name];
         coroutineAllowed = false;
+        pool_obj_comp.card_clickable=false;
 
         if (!facedUp)
         {
-            for (float i = 0f; i <= 180f; i += 10f)
+            for (float i = 0f; i <= 180f; i += 18f)
             {
                 transform.rotation = Quaternion.Euler(0f, i, 0f);
                 if (i == 90f)
                 {
                     rend.sprite = faceSprite;
                 }
-                yield return new WaitForSeconds(0.01f);
+                yield return new WaitForSeconds(0.002f);
             }
         }
 
         else if (facedUp)
         {
-            for (float i = 180f; i >= 0f; i -= 10f)
+            for (float i = 180f; i >= 0f; i -= 18f)
             {
                 transform.rotation = Quaternion.Euler(0f, i, 0f);
                 if (i == 90f)
                 {
                     rend.sprite = Back;
                 }
-                yield return new WaitForSeconds(0.01f);
+                yield return new WaitForSeconds(0.002f);
             }
         }
 
         coroutineAllowed = true;
         facedUp = !facedUp;
         isClicked=true;
-        // if(this_card_name=="SHERIFF"){
-        //     roundfinished=true;
-        //     pool_obj_comp.UpdateCardsStatus(this_card_name_adapted,roundfinished);
 
-        // }
         if(card_face_name=="MOONSHINE"||card_face_name=="STICKEMUP"||card_face_name=="DRAW"||card_face_name=="SHERIFF"||card_face_name=="LASSO"){
             // SceneManager.LoadScene ("Untitled");
 
             // pool_obj_comp.card_clickable=false;
-            GameObject video = GameObject.Find("Video Player");
-            // video.transform.position = new Vector3(-7.91f,0.0f,0.0f);
-            // // VideoPlayer automatically targets the camera backplane when it is added
-            // // to a camera object, no need to change videoPlayer.targetCamera.
-            var videoPlayer = video.GetComponent<UnityEngine.Video.VideoPlayer>();
-
-            // // Play on awake defaults to true. Set it to false to avoid the url set
-            // // below to auto-start playback since we're in Start().
-            // videoPlayer.playOnAwake = false;
-
-            // By default, VideoPlayers added to a camera will use the far plane.
-            // Let's target the near plane instead.
-            videoPlayer.renderMode = UnityEngine.Video.VideoRenderMode.CameraNearPlane;
-            // This will cause our Scene to be visible through the video being played.
+            GameObject video = GameObject.Find(card_face_name+"_VIDEO");
+            VideoPlayer videoPlayer = video.GetComponent<UnityEngine.Video.VideoPlayer>();
             videoPlayer.targetCameraAlpha = 1.0F;
 
-            // Set the video to play. URL supports local absolute or relative paths.
-            // Here, using absolute.
-            videoPlayer.url = "Assets/ANIMATION_"+card_face_name+".mp4";
-                   // Skip the first 100 frames.
-            // videoPlayer.frame = 100;
-
-            // Restart from beginning when done.
-            videoPlayer.isLooping = true;
-     
-
-
-            // Each time we reach the end, we slow down the playback by a factor of 10.
-
-            // Start playback. This means the VideoPlayer may have to prepare (reserve
-            // resources, pre-load a few frames, etc.). To better control the delays
-            // associated with this preparation one can use videoPlayer.Prepare() along with
-            // its prepareCompleted event.
-            
-            videoPlayer.Play();
-            // camera.transform.position = new Vector3(-7.91f,0.0f,0.0f);
-
+            yield return new WaitForSeconds(0.2f);
+            GameObject.Find(card_face_name+"_SFX").GetComponent<AudioSource>().Play();
             GameObject winButtonDown= GameObject.Find("WinButtonDown");
             WInClick winButtonDown_comp = winButtonDown.GetComponent<WInClick>();
-            winButtonDown_comp.Show(this.gameObject.name);
+            winButtonDown_comp.Show(this.gameObject.name,card_face_name);
             GameObject winButtonUp= GameObject.Find("WinButtonUp");
             WInClick winButtonUp_comp = winButtonUp.GetComponent<WInClick>();
-            winButtonUp_comp.Show(this.gameObject.name);
+            winButtonUp_comp.Show(this.gameObject.name,card_face_name);
         }
 
         else{
             //gold/bank
-            // if(card_face_name=="BANK"){isBank=true;}
+            pool_obj_comp.card_clickable=true;
             pool_obj_comp.UpdateCardsStatus2(this_card_name_adapted,card_face_name,false,false);
 
         }
+
 
     }  
 
@@ -252,18 +229,6 @@ public class CLICK : MonoBehaviour
 
         }
     }
-    private IEnumerator change_to_blankcard(){
-        // for (float i = 0f; i <= 100f; i += 10f)
-        //     {
-        //         transform.rotation = Quaternion.Euler(0f, i, 0f);
-        //         if (i == 90f)
-        //         {
-        //             rend.sprite = faceSprite;
-        //         }
-        //
-        yield return new WaitForSeconds(0.01f);
-        
-    }
     void OnMouseDown()
     {
     Debug.Log("mouse down");
@@ -279,14 +244,18 @@ public class CLICK : MonoBehaviour
                 isClicked=true;
                 StartCoroutine(RotateCard());
             }
-            else if(isClicked&& claimable&&facedUp&&(card_face_name=="GOLDBAR"||card_face_name=="GOLDSTASH")){
-                                Debug.Log("get gold"+ this.gameObject.name);
+            else if(isClicked&& claimable&&facedUp&&(card_face_name=="GOLDBAR"||card_face_name=="GOLDSTASH")&&pool_obj_comp.card_clickable){
+                Debug.Log("get gold"+ this.gameObject.name);
                 int score;
                 if(card_face_name=="GOLDBAR"){
                     score =1;
+                    GameObject.Find("CLAIMGOLD_SFX").GetComponent<AudioSource>().Play();
+
                 }
                 else{
                     score=3;
+                    GameObject.Find("CLAIMSTASH_SFX").GetComponent<AudioSource>().Play();
+
                 }
                 POOL pool= GameObject.Find("POOL").GetComponent<POOL>();
                 if(pool.startWithCARDBACK1){
@@ -300,6 +269,16 @@ public class CLICK : MonoBehaviour
                 }
 
                 // change card to blank card 
+                GameObject.Find(this.gameObject.name+"_GOLDSTASH").GetComponent<SpriteRenderer>().color = new Color(1.0f,1.0f,1.0f,0.0f);
+                GameObject.Find(this.gameObject.name+"_GOLDBAR").GetComponent<SpriteRenderer>().color = new Color(1.0f,1.0f,1.0f,0.0f);
+
+ 
+        GameObject.Find(this.gameObject.name+"_GOLDSTASH").GetComponent<UnityEngine.Video.VideoPlayer>().Stop();
+                
+        GameObject.Find(this.gameObject.name+"_GOLDBAR").GetComponent<UnityEngine.Video.VideoPlayer>().Stop();
+    
+//   GameObject.Find(objname+"_").GetComponent<UnityEngine.Video.VideoPlayer>().Play();
+
                 rend.color = new Color(1.0f,1.0f,1.0f,0.5f);
 
                 if(card_face_name=="GOLDBAR"){
